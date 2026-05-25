@@ -41,4 +41,34 @@ export const searchFeedback = ({ keyword, rating, program_name, skip = 0, limit 
 export const getStats = () =>
   api.get("/feedback/stats").then((r) => r.data);
 
+// ── ETL ────────────────────────────────────────────────────────────────────
+
+export const uploadFeedbackFile = (file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return api
+    .post("/etl/upload", form, { headers: { "Content-Type": "multipart/form-data" } })
+    .then((r) => r.data);
+};
+
+export const listETLRuns = ({ skip = 0, limit = 50 } = {}) =>
+  api.get("/etl/runs", { params: { skip, limit } }).then((r) => r.data);
+
+// ── Analytics ──────────────────────────────────────────────────────────────
+
+export const getAnalytics = () =>
+  api.get("/etl/analytics").then((r) => r.data);
+
+export const downloadReport = () =>
+  api
+    .get("/etl/report/download", { responseType: "blob" })
+    .then((r) => {
+      const url = window.URL.createObjectURL(new Blob([r.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "feedback_report.csv";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
+
 export default api;

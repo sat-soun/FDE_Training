@@ -33,12 +33,18 @@ export default function Navbar() {
           FeedbackHub
         </span>
       </div>
-      <div style={{ display: "flex", gap: 4 }}>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         <NavLink to="/" style={linkStyle} end>
           Dashboard
         </NavLink>
         <NavLink to="/feedback" style={linkStyle}>
           All Feedback
+        </NavLink>
+        <NavLink to="/analytics" style={linkStyle}>
+          Analytics
+        </NavLink>
+        <NavLink to="/etl" style={linkStyle}>
+          ETL Import
         </NavLink>
         <NavLink to="/submit" style={linkStyle}>
           + Submit

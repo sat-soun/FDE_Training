@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 import models
-from routers import feedback
+from routers import feedback, etl
 
 # Create all tables on startup
 models.Base.metadata.create_all(bind=engine)
@@ -10,7 +10,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Feedback Management System",
     description="A centralized platform for collecting and managing feedback from participants, employees, and customers.",
-    version="1.0.0",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -26,6 +26,7 @@ app.add_middleware(
 
 # Register routers
 app.include_router(feedback.router)
+app.include_router(etl.router)
 
 
 @app.get("/", tags=["Health"])

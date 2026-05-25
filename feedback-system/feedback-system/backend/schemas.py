@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class FeedbackBase(BaseModel):
@@ -49,3 +49,48 @@ class StatsResponse(BaseModel):
     total_feedback: int
     average_rating: float
     rating_distribution: dict[str, int]
+
+
+# ── ETL Schemas ────────────────────────────────────────────────────────────────
+
+class ETLRunResponse(BaseModel):
+    id: int
+    filename: str
+    status: str
+    total_records: int
+    imported_records: int
+    skipped_duplicates: int
+    skipped_invalid: int
+    error_message: Optional[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ETLRunListResponse(BaseModel):
+    total: int
+    runs: List[ETLRunResponse]
+
+
+# ── Analytics Schemas ──────────────────────────────────────────────────────────
+
+class ProgramAnalytics(BaseModel):
+    program_name: str
+    total_feedback: int
+    average_rating: float
+    rating_distribution: dict[str, int]
+
+
+class TrendPoint(BaseModel):
+    month: str          # e.g. "2024-03"
+    total_feedback: int
+    average_rating: float
+
+
+class AnalyticsResponse(BaseModel):
+    overall_total: int
+    overall_average_rating: float
+    by_program: List[ProgramAnalytics]
+    monthly_trend: List[TrendPoint]
+    top_program: Optional[str]
+    bottom_program: Optional[str]

@@ -5,6 +5,8 @@ import Dashboard from "./pages/Dashboard";
 import FeedbackList from "./pages/FeedbackList";
 import FeedbackDetail from "./pages/FeedbackDetail";
 import FeedbackForm from "./pages/FeedbackForm";
+import ETLUpload from "./pages/ETLUpload";
+import Analytics from "./pages/Analytics";
 
 export default function App() {
   return (
@@ -17,6 +19,8 @@ export default function App() {
           <Route path="/feedback/:id" element={<FeedbackDetail />} />
           <Route path="/feedback/:id/edit" element={<FeedbackForm mode="edit" />} />
           <Route path="/submit" element={<FeedbackForm mode="create" />} />
+          <Route path="/etl" element={<ETLUpload />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
