@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import Base, engine
-from routers import books, borrowers, search, transactions
+from routers import analytics, books, borrowers, etl, search, transactions
 
 
 @asynccontextmanager
@@ -22,9 +22,10 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description=(
-        "REST API for the Library Management System (Phase 1). "
-        "Provides CRUD over books and borrowers, plus borrow/return workflows "
-        "and a search endpoint."
+        "REST API for the Library Management System. "
+        "Phase 1: CRUD over books and borrowers, borrow/return workflows, search. "
+        "Phase 2: ETL pipeline for CSV ingestion and analytics endpoints "
+        "(popular books, category trends, monthly trends, overdue analysis)."
     ),
     lifespan=lifespan,
 )
@@ -42,6 +43,8 @@ app.include_router(books.router)
 app.include_router(borrowers.router)
 app.include_router(transactions.router)
 app.include_router(search.router)
+app.include_router(analytics.router)
+app.include_router(etl.router)
 
 
 @app.get("/", tags=["meta"])

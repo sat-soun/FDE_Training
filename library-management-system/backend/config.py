@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     )
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     app_name: str = "Library Management System API"
-    app_version: str = "1.0.0"
+    app_version: str = "2.0.0"
+
+    # Phase 2 -- ETL / analytics
+    loan_days: int = 14  # a transaction is overdue past this many days
 
     @property
     def cors_origin_list(self) -> List[str]:

@@ -32,3 +32,38 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 CREATE INDEX IF NOT EXISTS idx_txn_book     ON transactions (book_id);
 CREATE INDEX IF NOT EXISTS idx_txn_borrower ON transactions (borrower_id);
+
+-- ============================ Phase 2: Analytics Aggregates ============================
+-- Populated by the ETL pipeline (`python -m etl.run` or POST /etl/run).
+-- The /analytics endpoints read from these tables directly.
+
+CREATE TABLE IF NOT EXISTS agg_popular_books (
+    id            SERIAL PRIMARY KEY,
+    book_id       INTEGER       NOT NULL,
+    title         VARCHAR(255)  NOT NULL,
+    author        VARCHAR(255)  NOT NULL,
+    category      VARCHAR(100)  NOT NULL,
+    borrow_count  INTEGER       NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_agg_pop_book_id ON agg_popular_books (book_id);
+
+CREATE TABLE IF NOT EXISTS agg_category_borrowing (
+    id            SERIAL PRIMARY KEY,
+    category      VARCHAR(100)  NOT NULL UNIQUE,
+    borrow_count  INTEGER       NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS agg_monthly_trends (
+    id            SERIAL PRIMARY KEY,
+    month         VARCHAR(7)    NOT NULL UNIQUE,
+    borrow_count  INTEGER       NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS agg_overdue_summary (
+    id             SERIAL PRIMARY KEY,
+    loan_days      INTEGER     NOT NULL,
+    open_overdue   INTEGER     NOT NULL DEFAULT 0,
+    returned_late  INTEGER     NOT NULL DEFAULT 0,
+    open_total     INTEGER     NOT NULL DEFAULT 0,
+    computed_at    TIMESTAMPTZ NOT NULL
+);

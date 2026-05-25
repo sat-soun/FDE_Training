@@ -1,8 +1,10 @@
-# Library Management System — Phase 1
+# Library Management System — Phases 1 & 2
 
-A full-stack web application for managing books, borrowers, and borrow/return transactions in a library. Built with **React** (frontend), **FastAPI** (backend), and **PostgreSQL** (database).
+A full-stack web application for managing books, borrowers, and borrow/return transactions in a library — plus an ETL pipeline and analytics layer for usage reporting. Built with **React** (frontend), **FastAPI** (backend), and **PostgreSQL** (database).
 
-This implements every requirement in the Phase 1 specification: book CRUD, borrower CRUD, borrow/return workflows, search, REST API design, CORS, Pydantic validation, exception handling, and a responsive React UI built with functional components and hooks.
+**Phase 1** covers book CRUD, borrower CRUD, borrow/return workflows, search, REST API design, CORS, Pydantic validation, exception handling, and a responsive React UI.
+
+**Phase 2** adds an ETL pipeline that ingests book/borrower/transaction CSVs (with deduplication and missing-value handling), pre-aggregated analytics tables, four analytics REST endpoints (popular books, category trends, monthly trends, overdue analysis), and a new Analytics dashboard in the UI.
 
 ---
 
@@ -23,20 +25,32 @@ This implements every requirement in the Phase 1 specification: book CRUD, borro
 library-management-system/
 ├── backend/
 │   ├── main.py              # FastAPI app entrypoint
-│   ├── config.py            # Settings loaded from .env
+│   ├── config.py            # Settings loaded from .env (incl. LOAN_DAYS)
 │   ├── database.py          # SQLAlchemy engine & session
-│   ├── models.py            # ORM models (Book, Borrower, Transaction)
+│   ├── models.py            # ORM models — core + analytics aggregates
 │   ├── schemas.py           # Pydantic request/response schemas
 │   ├── crud.py              # Database access functions
 │   ├── routers/
 │   │   ├── books.py
 │   │   ├── borrowers.py
 │   │   ├── transactions.py  # /borrow, /return, /transactions, /dashboard
-│   │   └── search.py
-│   ├── services/            # (reserved for future business logic)
+│   │   ├── search.py
+│   │   ├── analytics.py     # /analytics/*       (Phase 2)
+│   │   └── etl.py           # POST /etl/run      (Phase 2)
+│   ├── etl/                 # ETL pipeline       (Phase 2)
+│   │   ├── extract.py       #   read CSVs
+│   │   ├── transform.py     #   clean / dedupe / drop missing
+│   │   ├── load.py          #   upsert + rebuild aggregates
+│   │   └── run.py           #   orchestrator + CLI entrypoint
 │   ├── schema.sql           # Reference DDL (app auto-creates tables too)
 │   ├── requirements.txt
 │   └── .env.example
+│
+├── data/                    # CSV inputs for the ETL  (Phase 2)
+│   ├── books.csv            # 66 rows
+│   ├── borrowers.csv        # 40 rows
+│   ├── transactions.csv     # 123 rows (incl. 3 deliberately dirty rows)
+│   └── README.md
 │
 ├── frontend/
 │   ├── index.html
@@ -46,21 +60,24 @@ library-management-system/
 │   └── src/
 │       ├── main.jsx
 │       ├── App.jsx
-│       ├── api.js              # Axios instance + error normalization
+│       ├── api.js
 │       ├── styles.css
 │       ├── components/
 │       │   ├── Modal.jsx
-│       │   └── StatusBadge.jsx
+│       │   ├── StatusBadge.jsx
+│       │   └── BarChart.jsx       # Dependency-free chart (Phase 2)
 │       ├── pages/
 │       │   ├── Dashboard.jsx
 │       │   ├── Books.jsx
 │       │   ├── Borrowers.jsx
 │       │   ├── BorrowReturn.jsx
-│       │   └── Search.jsx
+│       │   ├── Search.jsx
+│       │   └── Analytics.jsx      # Phase 2 reports + ETL trigger
 │       └── services/
 │           ├── books.js
 │           ├── borrowers.js
-│           └── transactions.js
+│           ├── transactions.js
+│           └── analytics.js
 │
 ├── .gitignore
 └── README.md
@@ -84,9 +101,7 @@ Create a database for the app. With `psql`:
 psql -U postgres -c "CREATE DATABASE library_db;"
 ```
 
-(Or use pgAdmin / DBeaver — any tool that can create a Postgres database.)
-
-You can let the app create the tables on first startup (it calls `Base.metadata.create_all`). If you'd rather run the DDL manually, the schema is at `backend/schema.sql`:
+You can let the app create the tables on first startup (it calls `Base.metadata.create_all`), or run `backend/schema.sql` by hand:
 
 ```bash
 psql -U postgres -d library_db -f backend/schema.sql
@@ -111,7 +126,6 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env and update DATABASE_URL if your Postgres credentials differ.
 
 # Start the API
 uvicorn main:app --reload --port 8000
@@ -119,9 +133,8 @@ uvicorn main:app --reload --port 8000
 
 The API is now running at <http://localhost:8000>.
 
-- **Interactive docs (Swagger):** <http://localhost:8000/docs>
+- **Interactive docs:** <http://localhost:8000/docs>
 - **ReDoc:** <http://localhost:8000/redoc>
-- **Health check:** <http://localhost:8000/health>
 
 ### Backend environment variables (`backend/.env`)
 
@@ -129,39 +142,46 @@ The API is now running at <http://localhost:8000>.
 |-----------------|-------------------------------------------------------------------------|----------------------------------------|
 | `DATABASE_URL`  | `postgresql+psycopg2://postgres:postgres@localhost:5432/library_db`     | SQLAlchemy URL for PostgreSQL          |
 | `CORS_ORIGINS`  | `http://localhost:5173,http://localhost:3000`                           | Comma-separated allowed origins        |
+| `LOAN_DAYS`     | `14`                                                                    | Days before an open borrow is overdue  |
 
 ---
 
 ## 3. Run the Frontend
 
-In a **second terminal**:
+In a second terminal:
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Configure environment (optional — defaults to http://localhost:8000)
 cp .env.example .env
-
-# Start the dev server
 npm run dev
 ```
 
 The app is now at <http://localhost:5173>.
 
-### Frontend environment variables (`frontend/.env`)
+---
 
-| Variable             | Default                  | Description                       |
-|----------------------|--------------------------|-----------------------------------|
-| `VITE_API_BASE_URL`  | `http://localhost:8000`  | Base URL of the FastAPI backend   |
+## 4. Populate Data with the ETL (Phase 2)
+
+The repository ships with a 229-row sample dataset in `data/`. With the backend running and the database empty, kick off the ETL once:
+
+```bash
+# Option A — from the CLI
+cd backend
+python -m etl.run
+
+# Option B — from the API
+curl -X POST http://localhost:8000/etl/run
+
+# Option C — from the UI
+# Open http://localhost:5173/analytics and click "Run ETL pipeline"
+```
+
+The ETL is idempotent — re-running it is always safe.
 
 ---
 
 ## API Reference
-
-All endpoints return JSON. Validation errors come back as HTTP 422; business-rule errors (e.g., trying to borrow an unavailable book) come back as HTTP 400 with a human-readable `detail`.
 
 ### Books
 
@@ -172,14 +192,6 @@ All endpoints return JSON. Validation errors come back as HTTP 422; business-rul
 | POST   | `/books`           | Create a book              |
 | PUT    | `/books/{id}`      | Update a book              |
 | DELETE | `/books/{id}`      | Delete a book              |
-
-Example create:
-
-```bash
-curl -X POST http://localhost:8000/books \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Clean Code","author":"Robert C. Martin","category":"Programming","isbn":"9780132350884"}'
-```
 
 ### Borrowers
 
@@ -206,9 +218,26 @@ curl -X POST http://localhost:8000/books \
 |--------|---------------------------------------------------|----------------------------------------------|
 | GET    | `/search?q=...&title=...&author=...&category=...` | Search books (any subset of params allowed)  |
 
+### Analytics (Phase 2)
+
+| Method | Endpoint                                  | Description                                                 |
+|--------|-------------------------------------------|-------------------------------------------------------------|
+| GET    | `/analytics/popular-books?limit=N`        | Top-N most borrowed books (default 10)                      |
+| GET    | `/analytics/category-borrowing`           | Borrow count per category                                   |
+| GET    | `/analytics/monthly-trends?months=N`      | Borrow count per `YYYY-MM` for the last N months            |
+| GET    | `/analytics/overdue?limit=N`              | Overdue summary + the currently overdue transactions list   |
+
+### ETL (Phase 2)
+
+| Method | Endpoint     | Description                                                          |
+|--------|--------------|----------------------------------------------------------------------|
+| POST   | `/etl/run`   | Ingest CSVs in `./data`, upsert rows, and rebuild analytics tables   |
+
 ---
 
 ## Database Schema
+
+Core tables (Phase 1):
 
 ```
 books
@@ -235,6 +264,15 @@ transactions
   return_date     TIMESTAMPTZ  (NULL = still borrowed)
 ```
 
+Analytics aggregates (Phase 2 — populated by the ETL):
+
+```
+agg_popular_books         (book_id, title, author, category, borrow_count)
+agg_category_borrowing    (category, borrow_count)
+agg_monthly_trends        (month YYYY-MM, borrow_count)
+agg_overdue_summary       (loan_days, open_overdue, returned_late, open_total, computed_at)
+```
+
 ---
 
 ## Pages (Frontend)
@@ -244,35 +282,48 @@ transactions
 - **Borrowers** — full CRUD with email + phone validation.
 - **Borrow / Return** — borrow an available book to any borrower; return open transactions in one click.
 - **Search** — by keyword (across title/author/category/ISBN) or by individual filters.
-
-All UI is built with functional components + hooks (`useState`, `useEffect`, `useMemo`), with client-side validation and graceful error handling for API failures.
+- **Analytics (Phase 2)** — popular books, borrowing by category, monthly trends, and a list of currently overdue transactions. Includes a one-click **Run ETL pipeline** button.
 
 ---
 
-## What's Intentionally NOT in Phase 1
+## ETL Pipeline (Phase 2)
 
-Per the requirements, the following are out of scope and not included:
+The ETL is a classic Extract → Transform → Load → Aggregate pipeline that ingests three CSVs and rebuilds the analytics tables.
+
+### Stage breakdown
+
+1. **Extract** (`etl/extract.py`) — reads `data/books.csv`, `data/borrowers.csv`, `data/transactions.csv`.
+2. **Transform** (`etl/transform.py`) — strips whitespace, lowercases emails, drops rows with missing required fields, deduplicates by natural key, parses borrow/return dates. Returns counters in the run report.
+3. **Load** (`etl/load.py`) — upserts books / borrowers / transactions, then reconciles each book's `availability_status` from the live state of its transactions.
+4. **Aggregate** (`etl/load.py`) — rebuilds `agg_popular_books`, `agg_category_borrowing`, `agg_monthly_trends`, and `agg_overdue_summary` from scratch.
+
+### Sample dataset
+
+A ready-to-run dataset lives under `data/` (66 books + 40 borrowers + 123 transactions = **229 records**, exceeding the spec's 150-record minimum). A few rows in `transactions.csv` are intentionally malformed so you can see the Transform stage's deduplication and validation in action — see `data/README.md`.
+
+### Bringing your own data
+
+Drop CSVs at the same paths with the same column names and re-run `python -m etl.run`. Column expectations:
+
+- `books.csv`: `title, author, category, isbn`
+- `borrowers.csv`: `borrower_name, email, phone`
+- `transactions.csv`: `book_isbn, borrower_email, borrow_date, return_date`
+
+Transactions reference books by **ISBN** and borrowers by **email** — surrogate IDs are resolved during Load, so the CSVs stay portable across databases.
+
+---
+
+## What's Still NOT Included
+
+Per the original Phase 1 scope (and not addressed in Phase 2):
 
 - Authentication / authorization
 - Notifications and reminders
-- Fine / overdue calculation
+- Fine calculation (overdue is detected and reported, but no monetary fines are computed)
 - AI/ML, recommendations, or semantic search
 - Cloud deployment
 
-The codebase is structured so each of these can be added cleanly later (e.g., `services/` is reserved for business logic, routers are modular, and the data model already records `borrow_date` and `return_date` to support fine logic).
-
----
-
-## Quick Smoke Test
-
-After both servers are running:
-
-1. Open <http://localhost:5173>.
-2. Go to **Borrowers**, add a borrower.
-3. Go to **Books**, add a book (any ISBN string).
-4. Go to **Borrow / Return**, borrow the new book for the new borrower.
-5. Return to the **Dashboard** — the counts should reflect the borrow.
-6. Click **Return** on the open transaction. The book becomes available again.
+The data model already records `borrow_date` and `return_date`, and the overdue summary surfaces exactly the inputs a fine-calculation feature would need.
 
 ---
 
@@ -280,5 +331,5 @@ After both servers are running:
 
 - **`psycopg2` install fails:** make sure you have Postgres client libs available, or `pip install psycopg2-binary` (already pinned in `requirements.txt`).
 - **CORS error in the browser:** confirm `CORS_ORIGINS` in `backend/.env` includes the frontend origin (default `http://localhost:5173`).
-- **Frontend can't reach the API:** check `VITE_API_BASE_URL` in `frontend/.env` and that the backend is running on that port.
 - **`relation "books" does not exist`:** the app auto-creates tables on startup. If you connected to a different database than expected, double-check `DATABASE_URL`.
+- **Analytics page is empty:** click **Run ETL pipeline**, or run `python -m etl.run` from the backend folder. The aggregates start empty until the ETL has run once.

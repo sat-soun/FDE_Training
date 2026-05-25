@@ -4,6 +4,7 @@ import Books from "./pages/Books.jsx";
 import Borrowers from "./pages/Borrowers.jsx";
 import BorrowReturn from "./pages/BorrowReturn.jsx";
 import Search from "./pages/Search.jsx";
+import Analytics from "./pages/Analytics.jsx";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <NavLink to="/borrowers">Borrowers</NavLink>
           <NavLink to="/borrow-return">Borrow / Return</NavLink>
           <NavLink to="/search">Search</NavLink>
+          <NavLink to="/analytics">Analytics</NavLink>
         </nav>
       </aside>
       <main className="main">
@@ -25,6 +27,7 @@ export default function App() {
           <Route path="/borrowers" element={<Borrowers />} />
           <Route path="/borrow-return" element={<BorrowReturn />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

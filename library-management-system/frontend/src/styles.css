@@ -147,8 +147,45 @@ button.small { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
 .success { color: #065f46; font-size: 0.9rem; margin-top: 0.5rem; }
 .spacer { height: 1rem; }
 
+/* ---------- Bar chart (Analytics) ---------- */
+.barchart { display: flex; flex-direction: column; gap: 0.4rem; }
+.barchart-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 32%) 1fr 60px;
+  align-items: center;
+  gap: 0.75rem;
+}
+.barchart-label {
+  font-size: 0.86rem;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barchart-track {
+  background: #eef2f7;
+  border-radius: 4px;
+  height: 18px;
+  overflow: hidden;
+}
+.barchart-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.barchart-value {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #111827;
+  text-align: right;
+}
+
 @media (max-width: 700px) {
   .app { flex-direction: column; }
   .sidebar { width: 100%; }
   .main { padding: 1rem; }
+  .barchart-row { grid-template-columns: 1fr 80px; }
+  .barchart-track { grid-column: 1 / 3; height: 14px; }
+  .barchart-value { grid-column: 2 / 3; }
 }

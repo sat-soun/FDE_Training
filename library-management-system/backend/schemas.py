@@ -101,3 +101,60 @@ class DashboardStats(BaseModel):
     borrowed_books: int
     total_borrowers: int
     open_transactions: int
+
+
+# ----------------------------- Analytics (Phase 2) -----------------------------
+
+
+class PopularBookOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    book_id: int
+    title: str
+    author: str
+    category: str
+    borrow_count: int
+
+
+class CategoryBorrowingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    category: str
+    borrow_count: int
+
+
+class MonthlyTrendOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    month: str  # 'YYYY-MM'
+    borrow_count: int
+
+
+class OverdueTransactionOut(BaseModel):
+    transaction_id: int
+    book_id: int
+    book_title: Optional[str] = None
+    borrower_id: int
+    borrower_name: Optional[str] = None
+    borrower_email: Optional[str] = None
+    borrow_date: datetime
+    days_overdue: int
+
+
+class OverdueReport(BaseModel):
+    loan_days: int
+    open_overdue: int
+    returned_late: int
+    open_total: int
+    computed_at: Optional[datetime] = None
+    items: list[OverdueTransactionOut] = []
+
+
+class ETLReport(BaseModel):
+    """Loose schema -- the ETL returns nested dicts and we surface them verbatim."""
+
+    model_config = ConfigDict(extra="allow")
+    data_dir: str
+    extract: dict
+    transform: dict
+    load: dict

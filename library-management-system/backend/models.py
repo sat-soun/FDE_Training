@@ -74,3 +74,47 @@ class Transaction(Base):
 
     book: Mapped[Book] = relationship(back_populates="transactions")
     borrower: Mapped[Borrower] = relationship(back_populates="transactions")
+
+
+# ============================ Analytics aggregates (Phase 2) ============================
+# Populated by the ETL pipeline. The /analytics endpoints read from these directly.
+
+
+class AggPopularBook(Base):
+    __tablename__ = "agg_popular_books"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    book_id: Mapped[int] = mapped_column(nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    author: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    borrow_count: Mapped[int] = mapped_column(nullable=False, default=0)
+
+
+class AggCategoryBorrowing(Base):
+    __tablename__ = "agg_category_borrowing"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    category: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    borrow_count: Mapped[int] = mapped_column(nullable=False, default=0)
+
+
+class AggMonthlyTrend(Base):
+    __tablename__ = "agg_monthly_trends"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    month: Mapped[str] = mapped_column(String(7), nullable=False, unique=True)  # 'YYYY-MM'
+    borrow_count: Mapped[int] = mapped_column(nullable=False, default=0)
+
+
+class AggOverdueSummary(Base):
+    __tablename__ = "agg_overdue_summary"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    loan_days: Mapped[int] = mapped_column(nullable=False)
+    open_overdue: Mapped[int] = mapped_column(nullable=False, default=0)
+    returned_late: Mapped[int] = mapped_column(nullable=False, default=0)
+    open_total: Mapped[int] = mapped_column(nullable=False, default=0)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
